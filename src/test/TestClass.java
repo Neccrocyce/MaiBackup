@@ -67,7 +67,9 @@ public class TestClass {
                 "Number of successful copied new files: 4/4 (100%)\n" +
                 "Number of changed files: 0\n" +
                 "Number of successful copied changed files: 0/0 (100%)\n" +
-                "Number of all successful copied files: 4/4 (100%)\n";
+                "Number of all successful copied files: 4/4 (100%)\n" +
+                "Number of files to remove: 0\n" +
+                "Number of successful removed files: 0/0 (100%)\n";
         int indexResult = MaiLogger.getLogAll().indexOf("INFO: Result:");
         assertEquals(expEv, MaiLogger.getLogAll().substring(indexResult + 14));
 
@@ -135,7 +137,9 @@ public class TestClass {
                     "Number of successful copied new files: 2/2 (100%)\n" +
                     "Number of changed files: 2\n" +
                     "Number of successful copied changed files: 2/2 (100%)\n" +
-                    "Number of all successful copied files: 4/4 (100%)\n";
+                    "Number of all successful copied files: 4/4 (100%)\n" +
+                    "Number of files to remove: 0\n" +
+                    "Number of successful removed files: 0/0 (100%)\n";
             int indexResult = MaiLogger.getLogAll().indexOf("INFO: Result:");
             assertEquals(expEv, MaiLogger.getLogAll().substring(indexResult + 14));
 
@@ -161,7 +165,9 @@ public class TestClass {
                 "Number of successful copied new files: 4/4 (100%)\n" +
                 "Number of changed files: 0\n" +
                 "Number of successful copied changed files: 0/0 (100%)\n" +
-                "Number of all successful copied files: 4/4 (100%)\n";
+                "Number of all successful copied files: 4/4 (100%)\n" +
+                "Number of files to remove: 0\n" +
+                "Number of successful removed files: 0/0 (100%)\n";
         int indexResult = MaiLogger.getLogAll().indexOf("INFO: Result:");
         assertEquals(expEv, MaiLogger.getLogAll().substring(indexResult + 14));
         TestExtraMethods.callMethod("connectDrive");

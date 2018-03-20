@@ -18,9 +18,9 @@ public class MaiBackup implements MaiLog {
      */
     private String lastLog;
     /**
-     * {0: number of files, 1: number of files to override, 2: number of overridden files, 3: number of new files, 4: number of copied new files, 5: number of failed copies of new files, 6: number of failed files to override}
+     * {0: number of files, 1: number of files to override, 2: number of overridden files, 3: number of new files, 4: number of copied new files, 5: number of files to remove, 6: number of removed files, 7: number of failed copies of new files, 8: number of failed files to override}
       */
-    private int[] statcopy = new int[7];
+    private int[] statcopy = new int[9];
     /**
      * directory for settings.cfg and log files
      */
@@ -46,8 +46,10 @@ public class MaiBackup implements MaiLog {
      */
     private List<String> src;
 
+    private static int status = 0;
     boolean isPaused = false;
-    private String currentFile;
+    private String currentFile = "";
+
 
     public static void main (String[] args) {
         try {
@@ -63,28 +65,36 @@ public class MaiBackup implements MaiLog {
         try {
             Console.getInstance().start();
             MaiLogger.logInfo("Started MaiLogger");
+            status++;
             //Load Settings
             instance.loadSettings();
+            status++;
             //connect
             if (!instance.devName.equals("")) {
                 instance.connectDrive();
             }
+            status++;
             //create dest dir
             if (!Files.exists(Paths.get(instance.dest))) {
                 Files.createDirectories(Paths.get(instance.dest));
             }
             //rotate
             instance.rotateBackups();
+            status++;
             //copy files
             instance.copyFiles();
+            status++;
             //move removed files to 01 dir
             instance.moveDeletedFiles ();
+            status++;
             //disconnect
             if (!instance.devName.equals("")) {
                 instance.disconnectDrive();
             }
+            status++;
             //evaluate stats
             instance.evaluateStats();
+            status++;
             //stop
             Console.getInstance().interrupt();
         } catch (Exception e) {
@@ -95,6 +105,31 @@ public class MaiBackup implements MaiLog {
 
     String getCurrentFile () {
         return currentFile;
+    }
+
+    String getStatus () {
+        switch (status) {
+            case 0:
+                return "Starting";
+            case 1:
+                return "Loading Settings";
+            case 2:
+                return "Connecting";
+            case 3:
+                return "Rotating";
+            case 4:
+                return "Copying";
+            case 5:
+                return "Removing Deleted Files";
+            case 6:
+                return "Disconnecting";
+            case 7:
+                return "Evaluating";
+            case 8:
+                return "Shutting down";
+            default:
+                return "Invalid state";
+        }
     }
 
     public static MaiBackup getInstance () {
@@ -382,7 +417,7 @@ public class MaiBackup implements MaiLog {
                         statcopy[4]++;
                         MaiLogger.logInfo("Copied: \"" + p.toString() + "\"");
                     } catch (IOException e) {
-                        statcopy[5]++;
+                        statcopy[7]++;
                         MaiLogger.logError("Failed to copy \"" + p.toString() + "\"" + ": " + e.getMessage());
                     }
                 }
@@ -393,7 +428,7 @@ public class MaiBackup implements MaiLog {
                         statcopy[2]++;
                         MaiLogger.logInfo("Copied: \"" + p.toString() + "\"");
                     } catch (IOException e) {
-                        statcopy[6]++;
+                        statcopy[8]++;
                         MaiLogger.logError("Failed to copy \"" + p.toString() + "\"");
                     }
                 }
@@ -495,11 +530,13 @@ public class MaiBackup implements MaiLog {
             String srcFile = srcPath.toString() + "\\" + p.getFileName().toString();
             if (!new File(srcFile).exists()) {
                 //move to 01
+                statcopy[5]++;
                 try {
                     if (!dst1Path.toFile().exists()) {
                         Files.createDirectories(dst1Path);
                     }
                     Files.move(p, Paths.get(dst1Path.toString() + "\\" + p.getFileName().toString()));
+                    statcopy[6]++;
                     MaiLogger.logInfo("Moved " + p.toString() + " -> " + (dst1Path.toString() + "\\" + p.getFileName().toString()));
                 } catch (IOException e) {
                     MaiLogger.logError("Failed to remove \"" + srcFile + "\" from Backup. Unable to move directory");
@@ -541,7 +578,10 @@ public class MaiBackup implements MaiLog {
                 "Number of successful copied new files: " + statcopy[4] + "/" + statcopy[3] + " (" + (statcopy[3] == 0 ? 100 : ((statcopy[4] * 100) / statcopy[3])) + "%)\n" +
                 "Number of changed files: " + statcopy[1] + "\n" +
                 "Number of successful copied changed files: " + statcopy[2] + "/" + statcopy[1] + " (" + (statcopy[1] == 0 ? 100 : ((statcopy[2] * 100) / statcopy[1])) + "%)\n" +
-                "Number of all successful copied files: " + allFilesCopied + "/" + filesToCopy + " (" + (filesToCopy == 0 ? 100 : ((allFilesCopied * 100) / filesToCopy)) + "%)");
+                "Number of all successful copied files: " + allFilesCopied + "/" + filesToCopy + " (" + (filesToCopy == 0 ? 100 : ((allFilesCopied * 100) / filesToCopy)) + "%)\n" +
+                "Number of files to remove: " + statcopy[5] + "\n" +
+                "Number of successful removed files: " + statcopy[6] + "/" + statcopy[5] + " (" + (statcopy[5] == 0 ? 100 : ((statcopy[6] * 100) / statcopy[5])) + "%)");
+
     }
 
     private void createDefaultProperties() {

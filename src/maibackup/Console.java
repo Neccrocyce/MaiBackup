@@ -9,8 +9,8 @@ public class Console extends Thread {
     private Command[] commands = new Command[] {
             new Command(0, "stop", "Stops the program. The Backup won't be complete and further runs of the program won't complete it!"),
             new Command(1, "pause", "Pauses the program. To continue use \"continue\""),
-            new Command(2, "continue", "Continues the program"),
-            new Command(3, "status", "Shows the file on which the program is currently working on. Furthermore it shows the current statistics")
+            new Command(2, "continue", "Continues the program. Alternate: type \"Enter\""),
+            new Command(3, "status", "Shows the state of the program and the file on which the program is currently working on. Furthermore it shows the current statistics")
     };
 
     private Console () {
@@ -29,11 +29,8 @@ public class Console extends Thread {
         Scanner in = new Scanner(System.in);
         while (!Thread.interrupted()) {
             try {
-                if (in.hasNextLine()) {
-                    runCommand(in.nextLine());
-                } else {
-                    Thread.sleep(100);
-                }
+                runCommand(in.nextLine());
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 break;
             }
@@ -87,6 +84,11 @@ public class Console extends Thread {
 
     private void runPause() {
         MaiBackup.getInstance().isPaused = true;
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            //
+        }
     }
 
     private void runContinue() {
@@ -94,8 +96,10 @@ public class Console extends Thread {
     }
 
     private void runStatus() {
+        runPause();
         System.out.println(MaiBackup.getInstance().getCurrentFile());
         MaiBackup.getInstance().evaluateStats();
+        System.out.println("Type \"Enter\" to continue");
     }
 
     private void runUnknownCommand(String cmd) {
@@ -103,18 +107,12 @@ public class Console extends Thread {
             for (Command c : commands) {
                 System.out.println(c.toString());
             }
+        } else if (cmd.equals("")) {
+            runContinue();
         } else {
             System.out.println("Unknown Command: \"" + cmd + "\"");
         }
     }
-
-
-
-
-
-
-
-
 
     private Command findCommand (String name) {
         for (Command cmd : commands) {

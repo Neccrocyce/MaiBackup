@@ -83,7 +83,7 @@ public class TestSeparate {
             e.printStackTrace();
             fail("Exception");
         }
-        callMethod2("copyFile",Paths.get(dest + "\\src"),dest);
+        callMethod2("copyFile",Paths.get(dest + "\\src"), dest, dest + "\\" + dir, "");
         checkNumDir("\\" + dir, 1);
         checkDirContent("\\" + dir ,"src");
         checkNumDir("\\" + dir + "\\src", 2);
@@ -321,7 +321,7 @@ public class TestSeparate {
             e.printStackTrace();
             fail("Exception");
         }
-        callMethod2("moveFile", Paths.get(dest + "\\src\\01"), dest + "\\src");
+        callMethod2("moveFile", Paths.get(dest + "\\src\\01"), dest + "\\src", dest + "\\" + dir0, dest + "\\" + dir1);
         checkNumDir(dir0 + "\\01", 2);
         checkDirContent(dir0 + "\\01", "a.txt", "b.txt");
         checkNumDir(dir1 + "\\01", 2);
@@ -407,8 +407,6 @@ public class TestSeparate {
 
         testSourceAsBefore();
     }
-
-    //TODO: check if src is never deleted
 
 
 }
