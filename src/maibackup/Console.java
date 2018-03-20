@@ -104,9 +104,11 @@ public class Console extends Thread {
 
     private void runUnknownCommand(String cmd) {
         if (cmd.toLowerCase().equals("help")) {
+            runPause();
             for (Command c : commands) {
                 System.out.println(c.toString());
             }
+            System.out.println("Type \"Enter\" to continue");
         } else if (cmd.equals("")) {
             runContinue();
         } else {
