@@ -97,6 +97,7 @@ public class MaiBackup implements MaiLog {
             status++;
             //stop
             Console.getInstance().interrupt();
+            System.out.println("Type \"Enter\" to continue");
         } catch (Exception e) {
             e.printStackTrace();
             MaiLogger.logCritical("Unknown Error: " + e.getMessage());

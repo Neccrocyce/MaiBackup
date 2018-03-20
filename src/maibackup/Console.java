@@ -97,7 +97,9 @@ public class Console extends Thread {
 
     private void runStatus() {
         runPause();
-        System.out.println(MaiBackup.getInstance().getCurrentFile());
+        System.out.println("Status: ");
+        System.out.println(MaiBackup.getInstance().getStatus());
+        System.out.println("Watching: " + MaiBackup.getInstance().getCurrentFile());
         MaiBackup.getInstance().evaluateStats();
         System.out.println("Type \"Enter\" to continue");
     }
