@@ -24,7 +24,7 @@ public class MaiBackup implements MaiLog {
     /**
      * directory for settings.cfg and log files
      */
-    private String dir = "%userprofile%\\Documents\\MaiBackup";
+    private String dir = System.getProperty("user.home") + "\\Documents\\MaiBackup";
     /**
      * Letter, which the network drive will bind to (e.g. X)
      */
@@ -46,10 +46,14 @@ public class MaiBackup implements MaiLog {
      */
     private List<String> src;
 
+    boolean isPaused = false;
+    private String currentFile;
+
     public static void main (String[] args) {
         try {
             instance = getInstance();
             MaiLogger.setUp(instance, -1, 5, true, instance.dir + "\\logs");
+            MaiLogger.rotate();
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(null, "Failed with Error: " + ("Unknown Error during the start of MaiBackup: " + e.getMessage()),"Abort", JOptionPane.ERROR_MESSAGE);
@@ -57,6 +61,7 @@ public class MaiBackup implements MaiLog {
         }
 
         try {
+            Console.getInstance().start();
             MaiLogger.logInfo("Started MaiLogger");
             //Load Settings
             instance.loadSettings();
@@ -80,10 +85,16 @@ public class MaiBackup implements MaiLog {
             }
             //evaluate stats
             instance.evaluateStats();
+            //stop
+            Console.getInstance().interrupt();
         } catch (Exception e) {
             e.printStackTrace();
             MaiLogger.logCritical("Unknown Error: " + e.getMessage());
         }
+    }
+
+    String getCurrentFile () {
+        return currentFile;
     }
 
     public static MaiBackup getInstance () {
@@ -166,7 +177,7 @@ public class MaiBackup implements MaiLog {
     /**
      * unbind share {@code devName}
      */
-    private void disconnectDrive () {
+    void disconnectDrive () {
         int id = MaiLogger.logTask("Disconnect share " + locatShare + " to " + devName);
         if (devName.length() != 1) {
             MaiLogger.failedTask(id);
@@ -232,7 +243,7 @@ public class MaiBackup implements MaiLog {
             }
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException | NullPointerException e) {
             MaiLogger.failedTask(id);
-            MaiLogger.logCritical("Unable to rotate Backups: Folders are named incorrectly: " + e.getMessage());
+            MaiLogger.logCritical("Unable to rotate Backups: Directories are named incorrectly: " + e.getMessage());
         }
         try {
             if (filesSorted[7] != null) {
@@ -296,10 +307,33 @@ public class MaiBackup implements MaiLog {
             }
         }
 
+        //Find 00 and 01 directory
+        String dst0Path = "";
+        String dst1Path = "";
+        try (Stream<Path> allDstDir = Files.list(Paths.get(dest))) {//all folders/files in this.dst
+            Path[] dirs = allDstDir.filter(f -> f.getFileName().toString().startsWith("00") || f.getFileName().toString().startsWith("01")).toArray(Path[]::new);
+            for (Path s : dirs) {
+                if (s.getFileName().toString().startsWith("00")) {
+                    dst0Path = s.toString();
+                } else {
+                    dst1Path = s.toString();
+                }
+            }
+            if (dst0Path.equals("")) {
+                MaiLogger.logCritical("Failed to copy files: Directories are named incorrectly");
+            }
+        } catch (IOException e) {
+            MaiLogger.logCritical("Failed to copy files: Unable to list directories");
+            return;
+        }
+
         //copy files
         MaiLogger.logInfo("Start Copying files");
+        int i = 1;
         for (String s : src) {
-            copyFile(Paths.get(s), Paths.get(s).getParent().toString());
+            MaiLogger.logInfo(s + ": (" + i + "/" + src.size() + ")");
+            copyFile(Paths.get(s), Paths.get(s).getParent().toString(), dst0Path, dst1Path);
+            i++;
         }
         MaiLogger.logInfo("Finished Copying files");
     }
@@ -309,15 +343,24 @@ public class MaiBackup implements MaiLog {
      * @param p Path to the file to copy
      * @param src root directory in which all files and folders are located which are wanted to backup
      */
-    private void copyFile (Path p, String src) {
+    private void copyFile (Path p, String src, String dst0, String dst1) {
+         while(isPaused) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+
+            }
+        }
+        currentFile = p.toString();
         if (Files.isDirectory(p)) {
-            try (Stream<Path> allDstDir = Files.list(Paths.get(dest))) {
-                Path dst0Path = Paths.get(allDstDir.filter(f -> f.getFileName().toString().startsWith("00")).findFirst().get().toString() + "\\" + p.toString().substring(src.length()));
-                if (!Files.exists(dst0Path)) {
+            MaiLogger.logInfo("Watching: " + p.toString());
+            try {
+                Path dst0Path = Paths.get(dst0 + "\\" + p.toString().substring(src.length()));
+                if (!dst0Path.toFile().exists()) {
                     Files.createDirectories(dst0Path);
                 }
                 try (Stream<Path> files  = Files.list(p)) {
-                    files.forEach(f -> copyFile(f, src));
+                    files.forEach(f -> copyFile(f, src,dst0,dst1));
                 }
             } catch (NoSuchElementException | IOException e) {
                 MaiLogger.logError("Failed to copy \"" + p.toString() + "\": Unable to list directories");
@@ -326,23 +369,13 @@ public class MaiBackup implements MaiLog {
         } else {
             statcopy[0]++;
             String dstFile = p.toString().substring(src.length());   //file without src-prefix
-            Path dst0Path = null;
-            Path dst1Path = null;
-            try (Stream<Path> allDstDir = Files.list(Paths.get(dest))) {//all folders/files in this.dst
-                Path[] dirs = allDstDir.filter(f -> f.getFileName().toString().startsWith("00") || f.getFileName().toString().startsWith("01")).toArray(Path[]::new);
-                for (Path s : dirs) {
-                    if (s.getFileName().toString().startsWith("00")) {
-                        dst0Path = Paths.get( s.toString() + "\\" + dstFile);
-                    } else {
-                        dst1Path = Paths.get( s.toString() + "\\" + dstFile);
-                    }
-                }
-            } catch (IOException e) {
-                MaiLogger.logError("Failed to copy \"" + p.toString() + "\": Unable to list directories");
-                return;
+            if (!dstFile.startsWith("\\")) {
+                dstFile = "\\" + dstFile;
             }
+            Path dst0Path = Paths.get( dst0 + dstFile);
+            Path dst1Path = Paths.get( dst1 + dstFile);
             try {
-                if (!Files.exists(dst0Path)) {
+                if (!dst0Path.toFile().exists()) {
                     try {
                         statcopy[3]++;
                         Files.copy(p, dst0Path, StandardCopyOption.COPY_ATTRIBUTES);
@@ -393,9 +426,29 @@ public class MaiBackup implements MaiLog {
     //checks all files of the backup, if they have been deleted from this.src
     //if so, then they will be moved to the directory 01_...
     private void moveDeletedFiles () {
+        //Find 00 and 01 directory
+        String dst0Path = "";
+        String dst1Path = "";
+        try (Stream<Path> allDstDir = Files.list(Paths.get(dest))) {//all folders/files in this.dst
+            Path[] dirs = allDstDir.filter(f -> f.getFileName().toString().startsWith("00") || f.getFileName().toString().startsWith("01")).toArray(Path[]::new);
+            for (Path s : dirs) {
+                if (s.getFileName().toString().startsWith("00")) {
+                    dst0Path = s.toString();
+                } else {
+                    dst1Path = s.toString();
+                }
+            }
+            if (dst0Path.equals("")) {
+                MaiLogger.logCritical("Failed to copy files: Directories are named incorrectly");
+            }
+        } catch (IOException e) {
+            MaiLogger.logCritical("Failed to copy files: Unable to list directories");
+            return;
+        }
+        //move
         MaiLogger.logInfo("Start Moving Deleted files to directory 01");
         for (String s : src) {
-            moveFile(Paths.get(s), Paths.get(s).getParent().toString());
+            moveFile(Paths.get(s), Paths.get(s).getParent().toString(),dst0Path,dst1Path);
         }
         MaiLogger.logInfo("Finished Moving Deleted files");
     }
@@ -406,28 +459,27 @@ public class MaiBackup implements MaiLog {
      * @param srcPath Path to the src Directory of which all files should be checked
      * @param srcRoot src root directory in which all files and folders are located which are wanted to backup
      */
-    private void moveFile (Path srcPath, String srcRoot) {
+    private void moveFile (Path srcPath, String srcRoot, String dst0, String dst1) {
+        while(isPaused) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+
+            }
+        }
+        currentFile = srcPath.toString();
         //check if srcPath is a directory
         if (!Files.isDirectory(srcPath)) {
             return;
         }
+        MaiLogger.logInfo("Watching: " + srcPath.toString());
         //define dst0Path (dst Path in 00 dir), dst1Path (dst Path in 01 dir)
         String dstFile = srcPath.toString().substring(srcRoot.length());   //dir without srcRoot-prefix
-        Path dst0Path = null;
-        Path dst1Path = null;
-        try (Stream<Path> allDstDir = Files.list(Paths.get(dest))) {//all folders/files in this.dst
-            Path[] dirs = allDstDir.filter(f -> f.getFileName().toString().startsWith("00") || f.getFileName().toString().startsWith("01")).toArray(Path[]::new);
-            for (Path s : dirs) {
-                if (s.getFileName().toString().startsWith("00")) {
-                    dst0Path = Paths.get( s.toString() + "\\" + dstFile);
-                } else {
-                    dst1Path = Paths.get( s.toString() + "\\" + dstFile);
-                }
-            }
-        } catch (IOException e) {
-            MaiLogger.logError("Failed to check if directory \"" + srcPath.toString() + "\" should be removed from Backup. Unable to list directories");
-            return;
+        if (!dstFile.startsWith("\\")) {
+            dstFile = "\\" + dstFile;
         }
+        Path dst0Path = Paths.get( dst0 + dstFile);
+        Path dst1Path = Paths.get( dst1 + dstFile);
 
         //list all dirs/files of dst
         Path[] dst0PathChildren = null;
@@ -440,22 +492,22 @@ public class MaiBackup implements MaiLog {
 
         //check if all files/dirs in dst0Path exist in srcPath
         for (Path p : dst0PathChildren) {
-            Path srcFile = Paths.get(srcPath.toString() + "\\" + p.getFileName().toString());
-            if (!Files.exists(srcFile)) {
+            String srcFile = srcPath.toString() + "\\" + p.getFileName().toString();
+            if (!new File(srcFile).exists()) {
                 //move to 01
                 try {
-                    if (!Files.exists(dst1Path)) {
+                    if (!dst1Path.toFile().exists()) {
                         Files.createDirectories(dst1Path);
                     }
                     Files.move(p, Paths.get(dst1Path.toString() + "\\" + p.getFileName().toString()));
                     MaiLogger.logInfo("Moved " + p.toString() + " -> " + (dst1Path.toString() + "\\" + p.getFileName().toString()));
                 } catch (IOException e) {
-                    MaiLogger.logError("Failed to remove \"" + srcFile.toString() + "\" from Backup. Unable to move directory");
+                    MaiLogger.logError("Failed to remove \"" + srcFile + "\" from Backup. Unable to move directory");
                     return;
                 }
             } else {
                 //check p
-                moveFile(srcFile, srcRoot);
+                moveFile(Paths.get(srcFile), srcRoot, dst0, dst1);
             }
         }
 
@@ -479,7 +531,7 @@ public class MaiBackup implements MaiLog {
         Files.delete(file);
     }
 
-    private void evaluateStats () {
+    void evaluateStats () {
         int filesToCopy = statcopy[1] + statcopy[3];
         int allFilesCopied = statcopy[2] + statcopy[4];
         MaiLogger.logInfo("Result:\n" +
@@ -519,6 +571,7 @@ public class MaiBackup implements MaiLog {
     @Override
     public void stop() {
         JOptionPane.showMessageDialog(null, "Failed with Error: " + (lastLog != null ? lastLog : "unknown Error"),"Abort", JOptionPane.ERROR_MESSAGE);
+        Console.getInstance().interrupt();
         System.exit(1);
     }
 
