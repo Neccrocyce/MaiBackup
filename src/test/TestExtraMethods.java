@@ -1,5 +1,7 @@
 package test;
 
+import maibackup.FileHandler;
+import maibackup.FixPaths;
 import maibackup.MaiBackup;
 
 import java.io.File;
@@ -82,17 +84,13 @@ public class TestExtraMethods {
     }
 
     static void setDir (String dir) {
-        try {
-            Reflector.setField(MaiBackup.getInstance(), "dir", "Z:\\Settings\\" + dir);
-        } catch (Exception e) {
-            e.printStackTrace();
-            fail("Exception");
-        }
+        FixPaths.DIR = "Z:\\Settings\\" + dir;
+        FixPaths.SETTINGS = FixPaths.DIR + "\\settings.cfg";
     }
 
-    static Object callMethod (String method, Object... args) {
+    static Object callMethodFile (String method, Object... args) {
         try {
-            return Reflector.callMethod(MaiBackup.getInstance(), method, args);
+            return Reflector.callMethod(FileHandler.getInstance(), method, args);
         } catch (InvocationTargetException e) {
             e.printStackTrace();
             fail("Exception");
@@ -100,9 +98,9 @@ public class TestExtraMethods {
         return null;
     }
 
-    static Object callMethod2 (String method, Object... args) {
+    static Object callMethod2File (String method, Object... args) {
         try {
-            return Reflector.callMethod2(MaiBackup.getInstance(), method, args);
+            return Reflector.callMethod2(FileHandler.getInstance(), method, args);
         } catch (InvocationTargetException e) {
             e.printStackTrace();
             fail("Exception");
@@ -110,7 +108,7 @@ public class TestExtraMethods {
         return null;
     }
 
-    static void createSettingsCFG (String name, String pathShare, String devName, String user, String pw, String dst, String... source) {
+    static void createSettingsCFG (String name, String pathShare, String devName, String user, String pw, String dst, String[] ignores, String... source) {
         Properties p = new Properties();
         p.setProperty("pathShare", pathShare);
         p.setProperty("deviceName", devName);
@@ -119,6 +117,9 @@ public class TestExtraMethods {
         p.setProperty("destination", dst);
         for(int i = 1; i <= source.length; i++) {
             p.setProperty("source" + i, source[i-1]);
+        }
+        for(int i = 1; i <= ignores.length; i++) {
+            p.setProperty("ignore" + i, ignores[i-1]);
         }
         try {
             Files.createDirectories(Paths.get("Z:\\Settings\\" + name));
@@ -129,7 +130,24 @@ public class TestExtraMethods {
     }
 
     static void createSettingsCFG (String name, String dst, String... source) {
-        createSettingsCFG(name, "","","","",dst,source);
+        createSettingsCFG(name, "","","","",dst, new String[]{}, source);
+    }
+
+    static String createExpResult (int newFiles, int changedFiles, int removedFiles, String sizeAllFiles, String sizeNewFiles, String sizeChangedFiles, String sizeRemovedFiles) {
+        return "Number of files to backup: \n" +
+                        "\tall files: \t\t" + (newFiles + changedFiles) + sizeAllFiles + "\n" +
+                        "\tnew files: \t\t" + newFiles + sizeNewFiles + "\n" +
+                        "\tchanged files: \t" + changedFiles + sizeChangedFiles + "\n" +
+                        "\tremoved files: \t" + removedFiles + sizeRemovedFiles + "\n" +
+                        "Number of files FAILED to backup: \n" +
+                        "\tall files: \t\t" + "0/" + (newFiles + changedFiles) + " (0%)" + "\n" +
+                        "\tnew files: \t\t" + "0/" + newFiles + " (0%)" + "\n" +
+                        "\tchanged files: \t" + "0/" + changedFiles + " (0%)" + "\n" +
+                        "\tremoved files: \t" +  "0/" + removedFiles + " (0%)" + "\n";
+    }
+
+    static String createExpResult (int newFiles, int changedFiles, int removedFiles) {
+        return createExpResult (newFiles, changedFiles, removedFiles, " (0 B)", " (0 B)", " (0 B)", " (0 B)");
     }
 
     static void testSourceAsBefore () {
@@ -139,5 +157,22 @@ public class TestExtraMethods {
         checkDirContent("\\src\\01","a.txt", "b.txt");
         checkNumDir("\\src\\02", 2);
         checkDirContent("\\src\\02","c.txt", "d.txt");
+    }
+
+    static void deleteDirectory (Path file) throws IOException, NullPointerException {
+        Path[] files;
+        try (Stream<Path> str = Files.list(file)) {
+            files = str.toArray(Path[]::new);
+        }
+        for (Path f : files) {
+            if (Files.isDirectory(f)) {
+                deleteDirectory(f);
+            }
+            else {
+                Files.delete(f);
+            }
+        }
+
+        Files.delete(file);
     }
 }

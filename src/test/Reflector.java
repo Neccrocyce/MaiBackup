@@ -33,8 +33,14 @@ public class Reflector {
         field.set(null,value);
     }
 
+    public static Object getStaticField (Class clas, String var) throws NoSuchFieldException, IllegalAccessException {
+        Field field = clas.getDeclaredField(var);
+        field.setAccessible(true);
+        return field.get(var);
+    }
+
     /**
-     * This method calls a method with private access and the name {@code name} and hand it over the arguments {@code args}
+     * This method calls a method with private access and the name {@code name} and hand over the arguments {@code args}
      * @param obj The object of which the method should be called
      * @param method The name of the method which should be called
      * @param args The arguments which should handed over
@@ -57,7 +63,7 @@ public class Reflector {
     }
 
     /**
-     * This method calls a method with private access and the name {@code name} and hand it over the arguments {@code args}
+     * This method calls a method with private access and the name {@code name} and hand over the arguments {@code args}
      * It takes one of the methods with the given name. It doesn't compare the type of the given arguments with these of the took method.
      * - if there are more methods with this name, this method will not work. In this case use callMethod (Object, String, Object...)
      * @param obj

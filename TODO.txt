@@ -1,0 +1,6 @@
+settings:
+    add timeout
+    delete devName
+
+save stop and continue
+add test case missing destination in settings
