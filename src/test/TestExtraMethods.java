@@ -35,7 +35,7 @@ public class TestExtraMethods {
 
     static void checkDirContent (String dir, String ... content) {
         Path dest = Paths.get(TestExtraMethods.dest + "\\" + dir);
-        String[] files = null;
+        String[] files;
         try (Stream<Path> filesStream = Files.list(dest)) {
             files = filesStream.map(f -> f.toFile().getName()).toArray(String[]::new);
             Arrays.sort(files);

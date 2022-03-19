@@ -15,8 +15,6 @@ import java.util.stream.Stream;
 public class FileHandler {
     private static FileHandler instance = null;
 
-    private String currentFile = "";
-
     public static FileHandler getInstance () {
         if (instance == null) {
             instance = new FileHandler();
@@ -177,21 +175,21 @@ public class FileHandler {
     /**
      * Copies a file or directory to {@code dst}
      * @param p Path to the file to copy
-     * @param src root directory in which all files and folders are located which are wanted to backup
+     * @param src root directory in which all files and folders are located which are wanted to be backed up
      */
     private void copyFile (Path p, String src, String dst0, String dst1, List<Path> ignores) {
         while(MaiBackup.isPaused()) {
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
 
             }
         }
-        // check if folder should be ignored and remove non-subfolders from list
-        List<Path> ignores_sub = new ArrayList<Path>();
+        // check if folder should be ignored and remove non-subdirectories from list
+        List<Path> ignores_sub = new ArrayList<>();
         for (Path folder : ignores) {
             if (folder.equals(p)) {
-                MaiLogger.logInfo("Ignored \"" + p.toString() + "\"");
+                MaiLogger.logInfo("Ignored \"" + p + "\"");
                 return;
             }
             else if (folder.startsWith(p)) {
@@ -200,9 +198,8 @@ public class FileHandler {
         }
 
         // copy files/folders
-        currentFile = p.toString();
         if (Files.isDirectory(p)) {
-            MaiLogger.logInfo("Checking for new/changed files in: " + p.toString());
+            MaiLogger.logInfo("Checking for new/changed files in: " + p);
             try {
                 Path dst0Path = Paths.get(dst0 + FixPaths.SEP + p.toString().substring(src.length()));
                 if (!dst0Path.toFile().exists()) {
@@ -212,7 +209,7 @@ public class FileHandler {
                     files.forEach(f -> copyFile(f, src,dst0,dst1, ignores_sub));
                 }
             } catch (NoSuchElementException | IOException e) {
-                MaiLogger.logError("Failed to copy \"" + p.toString() + "\": Unable to list directories");
+                MaiLogger.logError("Failed to copy \"" + p + "\": Unable to list directories");
             }
         } else {
             MaiBackup.getStats().incAllFiles();
@@ -229,9 +226,9 @@ public class FileHandler {
                     try {
                         Files.copy(p, dst0Path, StandardCopyOption.COPY_ATTRIBUTES);
                         MaiBackup.getStats().incSuccNewFiles();
-                        MaiLogger.logInfo("Copied: \"" + p.toString() + "\"");
+                        MaiLogger.logInfo("Copied: \"" + p + "\"");
                     } catch (IOException e) {
-                        MaiLogger.logError("Failed to copy \"" + p.toString() + "\"" + ": " + e.getMessage());
+                        MaiLogger.logError("Failed to copy \"" + p + "\"" + ": " + e.getMessage());
                     }
                 }
                 else if (Files.size(p) != Files.size(dst0Path) || !Files.getLastModifiedTime(p).equals(Files.getLastModifiedTime(dst0Path))) {
@@ -240,15 +237,15 @@ public class FileHandler {
                     try {
                         copy(p, dst0Path, dst1Path);
                         MaiBackup.getStats().incSuccChangedFiles();
-                        MaiLogger.logInfo("Copied: \"" + p.toString() + "\"");
+                        MaiLogger.logInfo("Copied: \"" + p + "\"");
                     } catch (IOException e) {
-                        MaiLogger.logError("Failed to copy \"" + p.toString() + "\"");
+                        MaiLogger.logError("Failed to copy \"" + p + "\"");
                     }
                 }
             } catch (IOException e) {
-                MaiLogger.logError("Failed to copy \"" + p.toString() + "\": Unable to read files");
+                MaiLogger.logError("Failed to copy \"" + p + "\": Unable to read files");
             } catch (NullPointerException e) {
-                MaiLogger.logCritical("Failed to copy\"" + p.toString() + "\": Missing directory \"00_...\"");
+                MaiLogger.logCritical("Failed to copy\"" + p + "\": Missing directory \"00_...\"");
             }
 
         }
@@ -257,9 +254,6 @@ public class FileHandler {
     /**
      * Copies a file represent by its path {@code dst0Path} to {@code dst1Path} and
      * copies a file represent by its path {@code srcPath} to {@code dst0Path}
-     * @param srcPath
-     * @param dst0Path
-     * @param dst1Path
      * @throws IOException if it failed to copy files
      * @throws FileAlreadyExistsException if file represent by {@code dst1Path} exists already
      */
@@ -311,16 +305,15 @@ public class FileHandler {
         while(MaiBackup.isPaused()) {
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
 
             }
         }
-        currentFile = srcPath.toString();
         //check if srcPath is a directory
         if (!Files.isDirectory(srcPath)) {
             return;
         }
-        MaiLogger.logInfo("Checking for removed files in: " + srcPath.toString());
+        MaiLogger.logInfo("Checking for removed files in: " + srcPath);
         //define dst0Path (dst Path in 00 dir), dst1Path (dst Path in 01 dir)
         String dstFile = srcPath.toString().substring(srcRoot.length());   //dir without srcRoot-prefix
         if (!dstFile.startsWith(FixPaths.SEP)) {
@@ -330,17 +323,17 @@ public class FileHandler {
         Path dst1Path = Paths.get( dst1 + dstFile);
 
         //list all dirs/files of dst
-        Path[] dst0PathChildren = null;
+        Path[] dst0PathChildren;
         try (Stream<Path> dst0Dirs = Files.list(dst0Path)) {
             dst0PathChildren = dst0Dirs.toArray(Path[]::new);
         } catch (IOException e) {
-            MaiLogger.logError("Failed to check if directory \"" + srcPath.toString() + "\" should be removed from Backup. Unable to list directories");
+            MaiLogger.logError("Failed to check if directory \"" + srcPath + "\" should be removed from Backup. Unable to list directories");
             return;
         }
 
         //check if all files/dirs in dst0Path exist in srcPath
         for (Path p : dst0PathChildren) {
-            String srcFile = srcPath.toString() + FixPaths.SEP + p.getFileName().toString();
+            String srcFile = srcPath + FixPaths.SEP + p.getFileName().toString();
             if (!new File(srcFile).exists()) {
                 //move to 01
                 try {
@@ -349,9 +342,9 @@ public class FileHandler {
                     if (!dst1Path.toFile().exists()) {
                         Files.createDirectories(dst1Path);
                     }
-                    Files.move(p, Paths.get(dst1Path.toString() + FixPaths.SEP + p.getFileName().toString()));
+                    Files.move(p, Paths.get(dst1Path + FixPaths.SEP + p.getFileName().toString()));
                     MaiBackup.getStats().incSuccRemovedFiles();
-                    MaiLogger.logInfo("Moved " + p.toString() + " -> " + (dst1Path.toString() + FixPaths.SEP + p.getFileName().toString()));
+                    MaiLogger.logInfo("Moved " + p + " -> " + (dst1Path + FixPaths.SEP + p.getFileName().toString()));
                 } catch (IOException e) {
                     MaiLogger.logError("Failed to remove \"" + srcFile + "\" from Backup. Unable to move directory");
                     return;

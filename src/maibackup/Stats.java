@@ -26,14 +26,14 @@ public class Stats {
      *  5: number of successful processed changed files
      *  6: number of successful processed removed files
      */
-    private int[] stats = new int[7];
+    private final int[] stats = new int[7];
 
     /**
      *  0: size of all new files
      *  1: size of all changed files
      *  2: size of all removed files
      */
-    private long[] stats_size = new long[3];
+    private final long[] stats_size = new long[3];
 
     public Stats() {
 

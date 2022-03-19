@@ -47,7 +47,6 @@ public class TestClass {
             e.printStackTrace();
             System.exit(1);
         }
-        setMaiBackupToNull();
     }
 
     @After
@@ -214,12 +213,11 @@ public class TestClass {
         setDir("complete2");
         //test
         TestExtraMethods.dest = "X:\\Test";
-
         String dir = "dst\\00_" + new SimpleDateFormat("yyyy.MM.dd").format(new Date());
         MaiBackup.main(null);
+        String result = MaiLogger.getLogAll().substring(MaiLogger.getLogAll().indexOf("INFO: Result:") + 14);
         String expEv = createExpResult(4, 0, 0);
-        int indexResult = MaiLogger.getLogAll().indexOf("INFO: Result:");
-        assertEquals(expEv, MaiLogger.getLogAll().substring(indexResult + 14));
+
         Connector.getInstance().connectDrive();
         try {
             checkNumDir("\\" + dir, 2);
@@ -232,14 +230,11 @@ public class TestClass {
             e.printStackTrace();
         } finally {
             //delete old dirs
-            try {
-
-                Reflector.callMethod2(MaiBackup.getInstance(),"deleteDirectory", Paths.get("X:/Test"));
-                Connector.getInstance().disconnectDrive();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            }
+            TestExtraMethods.callMethod2File("deleteDirectory", Paths.get("X:/Test"));
+            Connector.getInstance().disconnectDrive();
         }
+
+        assertEquals(expEv, result);
         TestExtraMethods.dest = "Z:\\Backup";
         testSourceAsBefore();
     }

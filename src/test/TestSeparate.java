@@ -26,7 +26,7 @@ public class TestSeparate {
 
     @BeforeClass
     public static void setup () {
-        MaiLogger.setUp(MaiBackup.getInstance(), -1, -1, true, false, "Z:/logs", "maibackup");
+        MaiLogger.setUp(new MaiBackup(), -1, -1, true, false, "Z:/logs", "maibackup");
         createSettingsCFG("copy", dest + "\\dst", dest + "\\src");
         createSettingsCFG("copyIgnore", "", "", "", "", dest + "\\dst", new String[] {dest + "\\src\\01\\b.txt", dest + "\\src\\02"}, dest + "\\src");
         createSettingsCFG("move", dest + "\\dst", dest + "\\src\\01", dest + "\\src\\02");
@@ -79,7 +79,6 @@ public class TestSeparate {
     @Test
     public void testCopyFile () {
         String dir = "dst\\00_a";
-        String src = "src";
         setDir("copy");
         SettingsLoader.loadSettings();
         try {
@@ -105,7 +104,6 @@ public class TestSeparate {
     @Test
     public void testCopyFileIgnore () {
         String dir = "dst\\00_a";
-        String src = "src";
         setDir("copyIgnore");
         SettingsLoader.loadSettings();
         try {

@@ -8,10 +8,8 @@ import javax.swing.*;
 import java.nio.file.*;
 
 public class MaiBackup implements MaiLog {
-    private static MaiBackup instance = null;
-
     private static final Stats stats = new Stats();
-    private static Console console = new Console();
+    private static final Console console = new Console();
     private static boolean paused = false;
 
     /**
@@ -37,8 +35,7 @@ public class MaiBackup implements MaiLog {
             startQuestion();
         }
         try {
-            instance = getInstance();
-            MaiLogger.setUp(instance, -1, 5, true, debug, FixPaths.LOGS, "maibackup");
+            MaiLogger.setUp(new MaiBackup(), -1, 5, true, debug, FixPaths.LOGS, "maibackup");
             MaiLogger.rotate();
         } catch (Exception e) {
             e.printStackTrace();
@@ -122,15 +119,7 @@ public class MaiBackup implements MaiLog {
         }
     }
 
-
-    public static MaiBackup getInstance () {
-        if (instance == null) {
-            instance = new MaiBackup();
-        }
-        return instance;
-    }
-
-    private MaiBackup () {
+    public MaiBackup() {
 
     }
 
@@ -157,7 +146,6 @@ public class MaiBackup implements MaiLog {
 
     /**
      * stop and exit the application if a critical error occurs or the user quits the application manually
-     * @param errorMessage
      */
     public static void stop (String errorMessage) {
         JOptionPane.showMessageDialog(null, "Failed with Error: " + (errorMessage.isEmpty() ? "unknown Error" : errorMessage),"Abort", JOptionPane.ERROR_MESSAGE);

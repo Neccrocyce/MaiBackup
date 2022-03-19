@@ -78,7 +78,7 @@ public class Connector {
         if (errMsg.length() == 0) {
             MaiLogger.logInfo("Connected to share " + locatShare);
         } else {
-            MaiLogger.logCritical("Unable to connect: " + errMsg.toString());
+            MaiLogger.logCritical("Unable to connect: " + errMsg);
         }
     }
 
@@ -105,7 +105,7 @@ public class Connector {
             MaiLogger.succeededTask(id);
         } else {
             MaiLogger.failedTask(id);
-            MaiLogger.logCritical("Unable to disconnect: " + errMsg.toString());
+            MaiLogger.logCritical("Unable to disconnect: " + errMsg);
         }
     }
 }

@@ -1,19 +1,22 @@
 package maibackup;
 
 import logger.MaiLogger;
-
-import java.io.IOException;
 import java.util.Scanner;
 
 public class Console extends Thread {
-    private static Console instance = null;
-    private Command[] commands = new Command[] {
-            new Command(0, "stop", "Stops the program. The Backup won't be complete and further runs of the program won't complete it!", false),
-            new Command(1, "pause", "Pauses the program. To continue use \"resume\"", false),
-            new Command(2, "resume", "Resumes the program. Alternate: type \"Enter\"", false),
-            new Command(3, "status", "Shows the state of the program and the file on which the program is currently working on. Furthermore it shows the current statistics", false),
-            new Command(4, "p", "pause", true),
-            new Command(5, "s", "status", true)
+    private final int cStop = 0;
+    private final int cPause = 1;
+    private final int cResume = 2;
+    private final int cStatus = 3;
+    private final int cP = 4;
+    private final int cS = 5;
+    private final Command[] commands = new Command[] {
+            new Command(cStop, "stop", "Stops the program. The Backup won't be complete and further runs of the program won't complete it!", false),
+            new Command(cPause, "pause", "Pauses the program. To continue use \"resume\"", false),
+            new Command(cResume, "resume", "Resumes the program. Alternate: type \"Enter\"", false),
+            new Command(cStatus, "status", "Shows the state of the program and the file on which the program is currently working on. Furthermore it shows the current statistics", false),
+            new Command(cP, "p", "pause", true),
+            new Command(cS, "s", "status", true)
     };
 
     public Console() {
@@ -36,23 +39,11 @@ public class Console extends Thread {
 
     private void runCommand (String command) throws InterruptedException {
         switch (findCommand(command).getId()) {
-            case 0:
-                runStop();
-                break;
-            case 1:
-            case 4:
-                runPause();
-                break;
-            case 2:
-                runResume();
-                break;
-            case 3:
-            case 5:
-                runStatus();
-                break;
-            default:
-                runUnknownCommand(command);
-                break;
+            case cStop -> runStop();
+            case cPause, cP -> runPause();
+            case cResume -> runResume();
+            case cStatus, cS -> runStatus();
+            default -> runUnknownCommand(command);
         }
     }
 
@@ -101,11 +92,11 @@ public class Console extends Thread {
     }
 
     private void runUnknownCommand(String cmd) {
-        if (cmd.toLowerCase().equals("help")) {
+        if (cmd.equalsIgnoreCase("help")) {
             runPause();
             for (Command c : commands) {
                 if (!c.isHiddenCommand()) {
-                    System.out.println(c.toString());
+                    System.out.println(c);
                 }
             }
             System.out.println("Type \"Enter\" to continue");
