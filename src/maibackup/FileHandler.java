@@ -6,10 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class FileHandler {
@@ -129,7 +126,7 @@ public class FileHandler {
     /**
      * copies all directories and files listed in {@code src}
      */
-    public void copyFiles() {
+    public String[] copyFiles(String[] sources) {
         //check for duplicate directory names
         List<String> srcNames = new ArrayList<>();
         for (String s : SettingsLoader.getSrc()) {
@@ -158,18 +155,22 @@ public class FileHandler {
             }
         } catch (IOException e) {
             MaiLogger.logCritical("Failed to copy files: Unable to list destination directories");
-            return;
         }
 
         //copy files
         MaiLogger.logInfo("STEP 2 / 3: Processing changed/new files");
-        int i = 1;
-        for (String s : SettingsLoader.getSrc()) {
-            MaiLogger.logInfo(s + ": (" + i + "/" + SettingsLoader.getSrc().size() + ")");
-            copyFile(Paths.get(s), Paths.get(s).getParent().toString(), dst0Path, dst1Path, SettingsLoader.getIgnore());
-            i++;
+        for (int i = 0; i < sources.length; i++) {
+            // check if stop program
+            if (MaiBackup.isStopAtNext()) {
+                return Arrays.copyOfRange(sources, i, sources.length);
+            }
+
+            MaiLogger.logInfo(sources[i] + ": (" + (i+1) + "/" + sources.length + ")");
+            copyFile(Paths.get(sources[i]), Paths.get(sources[i]).getParent().toString(), dst0Path, dst1Path, SettingsLoader.getIgnore());
         }
         MaiLogger.logInfo("Finished step 2 / 3 (Processing changed/new files)");
+
+        return new String[]{};
     }
 
     /**
@@ -267,7 +268,7 @@ public class FileHandler {
 
     //checks all files of the backup, if they have been deleted from this.src
     //if so, then they will be moved to the directory 01_...
-    public void moveDeletedFiles() {
+    public String[] moveDeletedFiles(String[] sources) {
         //Find 00 and 01 directory
         String dst0Path = "";
         String dst1Path = "";
@@ -285,14 +286,23 @@ public class FileHandler {
             }
         } catch (IOException e) {
             MaiLogger.logCritical("Failed to copy files: Unable to list destination directories");
-            return;
         }
         //move
         MaiLogger.logInfo("STEP 3 / 3: Processing removed files");
-        for (String s : SettingsLoader.getSrc()) {
-            moveFile(Paths.get(s), Paths.get(s).getParent().toString(),dst0Path,dst1Path);
+        for (int i = 0; i < sources.length; i++) {
+            // check if stop program
+            if (MaiBackup.isStopAtNext()) {
+                return Arrays.copyOfRange(sources, i, sources.length);
+            }
+            moveFile(Paths.get(sources[i]), Paths.get(sources[i]).getParent().toString(),dst0Path,dst1Path);
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
         MaiLogger.logInfo("Finished step 3 / 3 (Processing removed files)");
+        return new String[]{};
     }
 
     /**

@@ -14,5 +14,6 @@ public class FixPaths {
 
     public static String SETTINGS = DIR + SEP + "settings.cfg";
     final static String LOGS = DIR + SEP + "logs";
+    public static String PROGRESS = DIR + SEP + "progress.txt";
 
 }

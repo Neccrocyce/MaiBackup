@@ -135,7 +135,7 @@ public class TestSeparate {
             e.printStackTrace();
             fail("Exception");
         }
-        FileHandler.getInstance().copyFiles();
+        FileHandler.getInstance().copyFiles(SettingsLoader.getSrc());
         checkNumDir("\\" + dir, 1);
         checkDirContent("\\" + dir ,"src");
         checkNumDir("\\" + dir + "\\src", 2);
@@ -396,7 +396,7 @@ public class TestSeparate {
             e.printStackTrace();
             fail("Exception");
         }
-        FileHandler.getInstance().moveDeletedFiles();
+        FileHandler.getInstance().moveDeletedFiles(SettingsLoader.getSrc());
         checkNumDir(dir0 + "\\01", 2);
         checkDirContent(dir0 + "\\01", "a.txt", "b.txt");
         checkNumDir(dir0 + "\\02", 2);
@@ -426,7 +426,7 @@ public class TestSeparate {
             e.printStackTrace();
             fail("Exception");
         }
-        FileHandler.getInstance().copyFiles();
+        FileHandler.getInstance().copyFiles(SettingsLoader.getSrc());
         checkNumDir("\\" + dir0, 1);
         checkDirContent("\\" + dir0 ,"src");
         checkNumDir("\\" + dir0 + "\\src", 2);

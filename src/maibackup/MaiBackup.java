@@ -3,14 +3,18 @@ package maibackup;
 import logger.Group;
 import logger.MaiLog;
 import logger.MaiLogger;
+import netscape.javascript.JSObject;
 
 import javax.swing.*;
+import java.io.*;
 import java.nio.file.*;
+import java.util.Arrays;
 
 public class MaiBackup implements MaiLog {
     private static final Stats stats = new Stats();
     private static final Console console = new Console();
     private static boolean paused = false;
+    private static boolean stopAtNext = false;
 
     /**
      *
@@ -21,6 +25,7 @@ public class MaiBackup implements MaiLog {
     public static void main (String[] args) {
         boolean debug = false;
         boolean option = false;
+        boolean continue_progress = false;
 
         if (args != null) {
             for (String arg : args) {
@@ -28,6 +33,8 @@ public class MaiBackup implements MaiLog {
                     debug = true;
                 } else if (arg.equals("options")) {
                     option = true;
+                } else if (arg.equals("continue")) {
+                    continue_progress = true;
                 }
             }
         }
@@ -44,6 +51,10 @@ public class MaiBackup implements MaiLog {
         }
 
         try {
+            String progressStatus = "";
+            String[] progress = new String[]{};
+            String[] sources;
+
             console.start();
             MaiLogger.logInfo("Started MaiLogger");
             stats.incStatus();
@@ -51,6 +62,24 @@ public class MaiBackup implements MaiLog {
             //Load Settings
             SettingsLoader.loadSettings();
             stats.incStatus();
+
+            // Load Progress of last stopped backup
+            String proceedStatus = "";
+            String[] proceed = null;
+            if (continue_progress) {
+                MaiLogger.logInfo("Load progress of stopped backup to continue backup.");
+                BufferedReader br = new BufferedReader(new FileReader(FixPaths.PROGRESS));
+                String line;
+                StringBuilder sb = new StringBuilder();
+                while ((line = br.readLine()) != null) {
+                    sb.append(line);
+                    sb.append("\n");
+                }
+                br.close();
+                String[] contentSplit = sb.toString().split("\n");
+                proceedStatus = contentSplit[0];
+                proceed = Arrays.copyOfRange(contentSplit, 1, contentSplit.length);
+            }
 
             //connect
             if (SettingsLoader.isUseShare()) {
@@ -64,22 +93,64 @@ public class MaiBackup implements MaiLog {
             }
 
             //rotate
-            FileHandler.getInstance().rotateBackups();
+            if (!continue_progress) {
+                FileHandler.getInstance().rotateBackups();
+            }
             stats.incStatus();
 
             //copy files
-            FileHandler.getInstance().copyFiles();
-            stats.incStatus();
+            if (continue_progress && proceedStatus.equals("Processing new and changed files")) {
+                    sources = proceed;
+            } else if (!continue_progress) {
+                sources = SettingsLoader.getSrc();
+            } else {
+                // skip copying if progress stopped at remove files
+                sources = null;
+            }
+            if (sources != null) {
+                progressStatus = stats.getStatus();
+                progress = FileHandler.getInstance().copyFiles(sources);
+                stats.incStatus();
+            }
 
             //move removed files to 01 dir
-            FileHandler.getInstance().moveDeletedFiles ();
-            stats.incStatus();
+            if (continue_progress && proceedStatus.equals("Processing Removed Files")) {
+                sources = proceed;
+            } else if (!continue_progress) {
+                sources = SettingsLoader.getSrc();
+            } else {
+                // skip copying if progress stopped at remove files
+                sources = null;
+            }
+            if (sources != null && !stopAtNext) {
+                progressStatus = stats.getStatus();
+                progress = FileHandler.getInstance().moveDeletedFiles(sources);
+                stats.incStatus();
+            }
 
             //disconnect
             if (SettingsLoader.isUseShare()) {
                 Connector.getInstance().disconnectDrive();
             }
             stats.incStatus();
+
+            // save progress if stopAtNext
+            if (stopAtNext) {
+                StringBuilder contentBuilder = new StringBuilder();
+                contentBuilder.append(progressStatus);
+                contentBuilder.append("\n");
+                for (String s: progress) {
+                    contentBuilder.append(s);
+                    contentBuilder.append("\n");
+                }
+                try {
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(FixPaths.PROGRESS));
+                    writer.write(contentBuilder.toString());
+                    writer.close();
+                } catch (IOException e) {
+                    MaiLogger.logCritical("Cannot create file for progress");
+                }
+            }
 
             //evaluate stats
             if (stats.isError()) {
@@ -123,7 +194,7 @@ public class MaiBackup implements MaiLog {
 
     }
 
-    public static Stats getStats() {
+    public static Stats getStats () {
         return stats;
     }
 
@@ -135,8 +206,16 @@ public class MaiBackup implements MaiLog {
         paused = false;
     }
 
-    public static boolean isPaused() {
+    public static boolean isPaused () {
         return paused;
+    }
+
+    public static void stopAtNext () {
+        stopAtNext = true;
+    }
+
+    public static boolean isStopAtNext () {
+        return stopAtNext;
     }
 
     @Override

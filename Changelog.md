@@ -1,4 +1,17 @@
 # Changelog
+v 2.1 -2023-10-28
+--------
+#### ADDED:
+- option to stop backup, save the progress, and continue at a later point
+- Startup option:
+  - continue: continues the last backup
+
+### CHANGED:
+- command "stop" changed to "stopnow"
+- command "stop" stops backup as soon as the current source was backed up completely, and saves the progress.
+
+### FIXED:
+- Scanner of the command prompt will not be closed after entering "no" if command "stop" or "stopnow" is prompted.
 
 v 2.0 -2022-03-19
 --------

@@ -125,8 +125,8 @@ public class SettingsLoader {
         return dest;
     }
 
-    public static List<String> getSrc() {
-        return src;
+    public static String[] getSrc() {
+        return src.toArray(new String[0]);
     }
 
     public static List<Path> getIgnore() {
